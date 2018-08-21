@@ -1,0 +1,47 @@
+/**
+* This demo demonstrates usage of parallelism in pipeline
+**/
+
+properties([
+	parameters([
+		string(name: 'NODE_LABEL', defaultValue: 'generic', description: 'Execution node label', required: true),
+		choiceParam(name: 'PARALLEL_COUNT', choices: ['2', '3', '4', '5'], description: 'Parallel count'),
+	])
+])
+
+def nodeName = params.NODE_LABEL ?: 'generic'
+int parallelCnt = params.PARALLEL_COUNT.toInteger() ?: 3
+
+node(nodeName) {
+	echo "nodeName=${nodeName}"
+	echo "parallelCnt=${parallelCnt}"
+
+	stage('stage-0') {
+		parallel (
+            "firstTask" : {
+            	echo "firstTask is running"	
+            },
+            "secondTask" : {
+            	echo "secondTask is running"	    
+            },
+            "thirdTask" : {
+            	echo "thirdTask is running"	    
+            }
+        )
+	}
+
+	def branches = [:]
+	for (int i = 1; i <= parallelCnt ; i++) {
+		int index=i
+		branches["branch_${i}"] = {
+			stage("stage-${index}") {
+				echo "started at: " + new Date()
+				echo "running parallel branch: ${index}"
+				def sleepTime = index == 1 ? 5 : 2
+				sleep sleepTime
+				echo "finished at: " + new Date()
+			}	
+		}
+	}
+	parallel branches
+}

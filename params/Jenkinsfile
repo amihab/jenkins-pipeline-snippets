@@ -1,0 +1,34 @@
+/**
+* This demo demonstrates usage of Jenkins parameters in pipeline
+**/
+
+properties([
+	parameters([
+		string(name: 'NODE_LABEL', defaultValue: 'generic', description: 'Execution node label', required: true),
+		booleanParam(name: 'DEBUG_BUILD', defaultValue: true, description: 'Debug on/off'),
+		choiceParam(name: 'DEBUG_LEVEL', choices: ['info', 'debug', 'error'], description: 'Debug level'),
+		credentials(name: 'CRED_ID', defaultValue: 'p4-creds', credentialType: "Username with password", required: true, description: 'Creds to use')
+	])
+])
+
+def nodeName = params.NODE_LABEL ?: 'generic'
+def debugOn = params.DEBUG_BUILD ?: false
+def debugLevel = params.DEBUG_LEVEL ?: 'info'
+def credsId = params.CRED_ID ?: null
+
+node(nodeName) {
+	echo "nodeName=${nodeName}"
+	echo "debugOn=${debugOn}"
+	echo "debugLevel=${debugLevel}"
+	if (credsId) {
+	    echo "credsId=${credsId}"
+		def creds = [usernamePassword(credentialsId: credsId, usernameVariable: 'CREDUSER', passwordVariable: 'CREDPASSWD')]
+		withCredentials(creds) {
+			sh "echo CREDUSER=${CREDUSER} > out.txt"
+			sh "echo CREDPASSWD=${CREDPASSWD} >> out.txt"
+		}
+		sh 'cat out.txt'
+	} else {
+		echo "CRED_ID parameter is not defined!"
+	}
+}

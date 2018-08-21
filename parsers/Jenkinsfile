@@ -1,0 +1,62 @@
+/**
+* This demo demonstrates writing & parsing text files in various formats 
+**/
+
+def nodeName = 'generic'
+def ymlFile = 'family.yml'
+def ymlText = """\
+    family:
+      parents:
+        father: 'Papa bear'
+        mother: 'Mama bear'
+      kids:
+        - 'Baby bear 1'
+        - 'Baby bear 2'
+        - 'Baby bear 3'
+"""
+
+node(nodeName){
+    stage('checkout') {
+        checkout scm
+    }
+
+    stage('write-yml') {    
+        writeFile file: ymlFile, text: ymlText
+        sh "cat ${ymlFile}"     
+    }
+    
+    stage('read-yml') {
+        def ymlContent = findFiles(glob: ymlFile) ? readYaml(file: ymlFile) : [:]
+        sh "echo ${ymlContent}"
+        def father = ymlContent.family.parents.father
+        def mother = ymlContent.family.parents.mother
+        def kids = ymlContent.family.kids
+        echo "father=${father}"
+        echo "mother=${mother}"
+        echo "kids=${kids}"
+        kids.each {k ->
+            echo "kid=${k}"    
+        }
+        
+        def kid2 = kids[1]
+        echo "kid2=${kid2}"
+    }
+
+    stage('parse-xml') {
+        dir('parsers') {
+            def xml = readFile "family.xml"
+            def family = new XmlSlurper().parseText(xml)
+            def father = family.parents.father
+            def mother = family.parents.mother
+            echo "father=${father}"
+            echo "mother=${mother}"
+
+            family.kids.kid.each {k ->
+                echo "kid=${k}"    
+            }
+
+            def kid2 = family.kids.kid[1]
+            echo "kid2=${kid2}"
+        }
+    }
+}

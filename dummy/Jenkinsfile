@@ -1,0 +1,21 @@
+/**
+* This is a dummy pipeline Job which is required by the exec demo
+**/
+
+properties([
+	parameters([
+		string(name: 'NODE_LABEL', defaultValue: 'generic', description: 'Execution node label', required: true),
+		booleanParam(name: 'WITH_TWS', defaultValue: true, description: 'With Maestro?')
+	])
+])
+
+def nodeName = params.NODE_LABEL ?: 'generic'
+def withTWS = params.WITH_TWS ?: false
+
+node(nodeName) {
+	echo "Started at: " + new Date()
+	echo "nodeName=${nodeName}"
+	echo "withTWS=${withTWS}"
+	sleep 10
+	echo "Finished at: " + new Date()
+}

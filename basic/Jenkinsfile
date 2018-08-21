@@ -1,0 +1,38 @@
+/**
+* This demo demonstrates basic pipeline concepts
+* 1. node -> stages -> steps -> workspace
+* 2. text files (list, write, print, delete)
+* 3. directory (create, change, delete)
+**/
+
+def nodeName = 'generic'
+def textFile1 = 'file1.txt'
+def textFile2 = 'file2.txt'
+def tempDir = 'tmp-dir'
+
+node(nodeName){
+    stage('write text file') {    
+        dir(tempDir) {
+            sh "echo 'hello world from shell command' > ${textFile1}"
+            writeFile file: textFile2, text: 'hello world from pipeline step'
+            sh 'ls -alrt'    
+        }
+    }
+    
+    stage('print text file') {
+        dir(tempDir) {
+            sh """
+                echo '******* file 1 ********'
+                cat ${textFile1}
+                echo '******* file 2 ********'
+                cat ${textFile2}
+            """    
+        }    
+    }
+    
+    stage ('clean workspace') {
+        sh ' ls -alrt'
+        deleteDir()
+        sh ' ls -alrt'
+    }    
+}

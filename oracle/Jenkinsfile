@@ -1,0 +1,110 @@
+/**
+* This is some "twisted" way of using Oracle in Pipeline.
+* This is definitely not the best approach to use, but still interesting way!
+*  
+* This demo depends on the following prerequisites:
+* 1) Oracle jdbc jar (e.g. ojdbc6.jar) must be copied to Jenkins master at: /usr/java/packages/lib/ext 
+* 2) Add the following script approvals:
+*	- method groovy.sql.Sql close
+*	- method groovy.sql.Sql execute java.lang.String
+*	- method groovy.sql.Sql execute java.lang.String java.util.List
+*	- method groovy.sql.Sql rows java.lang.String
+*	- staticMethod groovy.sql.Sql newInstance java.lang.String java.lang.String java.lang.String java.lang.String
+**/
+
+import groovy.sql.Sql
+
+properties([
+	parameters([
+		string(name: 'ORA_USER', defaultValue: '', description: 'Oracle user', required: true),
+		string(name: 'ORA_PASS', defaultValue: '', description: 'Oracle password', required: true),
+		string(name: 'ORA_INST', defaultValue: '', description: 'Oracle instance', required: true),
+		string(name: 'ORA_HOST', defaultValue: '', description: 'Oracle database host', required: true),
+		string(name: 'ORA_PORT', defaultValue: '1521', description: 'Oracle database port', required: true),
+	])
+])
+
+def nodeName = 'generic'
+def oraUser = params.ORA_USER ?: null
+def oraPass = params.ORA_PASS ?: null
+def oraInst = params.ORA_INST ?: null
+def oraHost = params.ORA_HOST ?: null
+def oraPort = params.ORA_PORT ?: 1521
+def oraUrl = "jdbc:oracle:thin:@${oraHost}:${oraPort}:${oraInst}"
+
+node('generic') {
+		stage('validate parameters') {
+		if (!oraUser) {
+			error('ORA_USER parameter must be populated!')
+		}
+		if (!oraPass) {
+			error('ORA_PASS parameter must be populated!')
+		}
+		if (!oraInst) {
+			error('ORA_INST parameter must be populated!')
+		}
+		if (!oraHost) {
+			error('ORA_HOST parameter must be populated!')
+		}
+		if (!oraPort) {
+			error('ORA_PORT parameter must be populated!')
+		}
+	}
+
+	stage('checkout') {
+		checkout scm
+	}
+
+	stage('oracle') {
+		def sqlSelect
+		def sqlDrop
+		def sqlInsert
+
+		dir ('oracle') {
+			sqlDrop = readFile "person_drop.sql"
+			sqlSelect = readFile "person_create.sql"
+			sqlInsert = readFile "person_insert.sql"
+		}
+
+		def dbConn = Sql.newInstance(oraUrl, oraUser, oraPass, 'oracle.jdbc.driver.OracleDriver')
+
+		echo "==================="
+		echo "=== PERSON DROP ==="
+		echo "==================="
+		try {
+            dbConn.execute(sqlDrop)
+        }
+        catch (exc) {
+            echo "Table doesn't exist, no need to drop ..."
+        }
+		
+		echo "====================="
+		echo "=== PERSON CREATE ==="
+		echo "====================="
+		dbConn.execute(sqlSelect)
+
+		echo "====================="
+		echo "=== PERSON INSERT ==="
+		echo "====================="
+		def persons = [
+			['Papa Bear', 'Green Forest 24', 32],
+			['Mother Bear', 'Green Forest 24', 30],
+			['Dracula', 'Dark Hell 24', 132],
+		]
+
+		persons.each {person ->
+			dbConn.execute(sqlInsert, person)	
+		}
+
+		echo "====================="
+		echo "=== PERSON SELECT ==="
+		echo "====================="
+		def sql_PersonSelect = "select * from person"
+		def output2 = dbConn.rows(sql_PersonSelect)
+		output2.each {row ->
+	        echo "Name: " + row.NAME + ", Address: " + row.ADDRESS + ", Age: " + row.AGE
+	    }
+
+		dbConn.close()
+	}    
+}    

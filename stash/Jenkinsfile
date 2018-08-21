@@ -1,0 +1,32 @@
+/**
+* This demo demonstrates stash & unstash concepts 
+**/
+
+def nodeName = 'generic'
+def checkoutDir = 'my-git-sources'
+def stashName = 'my-stash'
+
+node(nodeName) {
+	stage('checkout') {
+		dir(checkoutDir) {
+			checkout scm
+		}
+	}
+
+	stage('stash') {
+		sh "tar -czf ${stashName}.tar.gz ${checkoutDir}"
+		stash name: stashName, includes: "${stashName}.tar.gz"
+	}
+}
+
+node(nodeName) {
+	stage('unstash') {
+		dir(checkoutDir) {
+			unstash stashName
+			sh 'ls -alrt'
+		}
+
+		sh "ls -la ${pwd()}"
+		sh "ls -la ${pwd()}/${checkoutDir}"
+	}
+}

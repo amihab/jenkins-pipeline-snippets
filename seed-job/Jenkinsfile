@@ -1,0 +1,28 @@
+/**
+* This demo demonstrates pipeline seed job that creates Jenkins jobs
+* This demo requires the Job DSL Jenkins plugin 
+**/
+
+def nodeName = 'generic'
+def folderName = 'seed-jobs'
+def jobName = 'seed-job'
+def dslFile = 'seed_job.groovy'
+
+node(nodeName) {
+	stage('checkout') {
+		checkout scm
+	}
+
+	stage('gen-dsl-job') {
+		dir('seed-job') {
+			env.JOB_NAME = jobName
+			env.FOLDER_NAME = folderName
+			jobDsl targets: [dslFile].join('\n'),
+			removedJobAction: 'DELETE',
+			removedViewAction: 'DELETE',
+			lookupStrategy: 'SEED_JOB',
+			additionalParameters: [jobName: jobName, folderName: folderName],
+			additionalClasspath: ['*.jar'].join('\n')
+		}
+	}
+}

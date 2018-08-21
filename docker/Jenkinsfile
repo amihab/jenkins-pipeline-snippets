@@ -1,0 +1,37 @@
+/**
+* This demo demonstrates usage of Docker containers in Jenkins pipeline
+**/
+
+def nodeName = 'generic'
+def baseDir = 'docker'
+
+node(nodeName) {
+	stage('checkout') {
+		checkout scm
+	}
+
+	stage('run-maven') {
+		dir("${baseDir}/maven") {
+			docker.image('maven:3-alpine').inside {
+				sh 'mvn -B -s settings.xml clean compile'
+				sh 'java -cp target/classes com/my/hello/App'
+			}
+		}
+	}
+
+	stage('run-python') {
+		dir("${baseDir}/python") {
+			docker.image('python').inside {
+				sh 'python hello.py'
+			}
+		}
+	}
+
+	stage('run-groovy') {
+		dir("${baseDir}/groovy") {
+			docker.image('docker.io/groovy').inside {
+				sh 'groovy hello.groovy'
+			}
+		}
+	}
+}

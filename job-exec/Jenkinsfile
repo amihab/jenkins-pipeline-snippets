@@ -1,0 +1,33 @@
+/**
+* This demo demonstrates usage of Jenkins job execution in pipeline
+* Depends on manual creation of the dummy-job in your Jenkins (see dummy folder)
+**/
+
+def nodeName = 'generic'
+def jenkinsUrl = 'http://host:port'
+def jenkinsJob = 'pipeline-demo/dummy-job'
+
+node(nodeName) {
+	stage('checkout') {
+		checkout scm
+	}
+
+	stage('exec on local jenkins') {
+		def jenkinsJobParams = [
+			[$class: 'StringParameterValue', name: 'NODE_LABEL', value: nodeName],
+			[$class: 'BooleanParameterValue', name: 'WITH_TWS', value: false]
+		]
+
+		build job: jenkinsJob, parameters: jenkinsJobParams
+	}
+
+	stage('exec on remote jenkins') {
+		def creds = usernameColonPassword(credentialsId: 'jenkins-api-token', variable: 'JENKINS_API_TOKEN')
+		def jenkinsJobParams = "-p NODE_LABEL=${nodeName} -p WITH_TWS=false"
+
+		withCredentials([creds]){
+			sh "wget -O jenkins-cli.jar ${jenkinsUrl}/jnlpJars/jenkins-cli.jar"
+			sh "java -jar jenkins-cli.jar -s ${jenkinsUrl} -auth ${JENKINS_API_TOKEN} build ${jenkinsJob} -r 20 -s -v ${jenkinsJobParams}"
+		}
+	}
+}

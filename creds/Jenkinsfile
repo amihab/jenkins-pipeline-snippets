@@ -1,0 +1,39 @@
+/**
+* This demo demonstrates usage of Jenkins credentials in pipeline
+**/
+
+def nodeName = 'generic'
+def p4port = 'p4host:p4port'
+def p4Creds = [usernamePassword(credentialsId: 'p4-creds', usernameVariable: 'P4USER', passwordVariable: 'P4PASSWD')]
+def googleUrlCredId = 'google-url-cred'
+def sshCredId = 'ssh-key'
+def remoteSshUser = 'remoteUser'
+def remoteSshHost = 'remoteHost'
+
+node(nodeName) {
+	stage('p4-creds') {
+		env.P4PORT = p4port
+		withCredentials(p4Creds) {
+			sh "echo ${P4PASSWD} | p4 login && p4 counters"
+		}	
+	}
+
+	stage('ssh-key-creds') {
+		def userHost = ["REMOTE_USER=${remoteSshUser}", "REMOTE_HOST=${remoteSshHost}"]
+		withEnv(userHost) {
+			sshagent(credentials: [sshCredId]) {
+				def remoteAccount = "${REMOTE_USER}@${REMOTE_HOST}"
+				echo "remoteAccount=${remoteAccount}"
+				sh "ssh -o StrictHostKeyChecking=no ${remoteAccount} ls -alrt && pwd"	
+			}	
+		}	
+	}
+
+	stage('string-creds') {
+		withCredentials([string(credentialsId: googleUrlCredId, variable: 'GOOGLE_URL')]) {
+		    echo "GOOGLE_URL=${GOOGLE_URL}"
+		    sh "echo GOOGLE_URL=${GOOGLE_URL} > out.txt"
+		}
+        sh 'cat out.txt'
+	}
+}
